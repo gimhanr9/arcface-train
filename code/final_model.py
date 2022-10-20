@@ -520,7 +520,7 @@ def residual_unit(data, num_filter, stride, dim_match, name, bottle_neck, **kwar
 	elif uv == 2:
 		return residual_unit_v2(data, num_filter, stride, dim_match, name, bottle_neck, **kwargs)
 	elif uv == 4:
-		return residual_unit_v4(data, num_filter, stride, dim_match, name, bottle_neck, **kwargs)
+		return residual_unit_v2(data, num_filter, stride, dim_match, name, bottle_neck, **kwargs)
 	else:
 		return residual_unit_v3(data, num_filter, stride, dim_match, name, bottle_neck, **kwargs)
 
@@ -1276,8 +1276,8 @@ class Trainer:
 
 				if i % 5700 == 0 and self.use_arcface and i > 10:
 					self.test_on_val_data(False, i, alfa_multiplied_qin)
-		 			end_epoch=i//5700
-		 			path_to_save="../models/arcface_{}_final.h5".format(end_epoch)
+					end_epoch=i//5700
+					path_to_save="../models/arcface_{}_final.h5".format(end_epoch)
 					self.save_final_model(path_to_save)
 					print("[*] Final model saved")
 					plotting_epochs=range(0,end_epoch)
@@ -1289,7 +1289,7 @@ class Trainer:
 					
 					txt1="../images/output_loss_{}.png".format(end_epoch)
 					plt.savefig(txt1)
-					plt.show()
+					plt.close()
 			
 					plt.plot(plotting_epochs, train_accu, 'b')
 					plt.title('Training accuracy')
@@ -1299,7 +1299,7 @@ class Trainer:
 					
 					txt2="../images/output_accu_{}.png".format(end_epoch)
 					plt.savefig(txt2)
-					plt.show()
+					plt.close()
 		 
 				if i % 570000 == 0 and self.use_arcface and i > 10:
 					self.save_final_model("../models/saveddrive/arcface_100final.h5")
