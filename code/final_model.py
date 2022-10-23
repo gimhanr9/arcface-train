@@ -1348,7 +1348,7 @@ class Trainer:
 					accuracy1=self.test_on_val_data(False, i, alfa_multiplied_qin)
 					accuracy_lfw.append(accuracy1)
 					end_epoch=i//5700
-					path_to_save="../models/arcface_{}_final.h5".format(end_epoch)
+					path_to_save="../models/arcface_cbam_{}_final.h5".format(end_epoch)
 					self.save_final_model(path_to_save)
 					print("[*] Final model saved")
 					plotting_epochs=range(0,end_epoch)
@@ -1358,7 +1358,7 @@ class Trainer:
 					plt.ylabel('Loss')
 					plt.legend(['Training loss'])
 					
-					txt1="../images/output_loss_{}.png".format(end_epoch)
+					txt1="../images/output_cbam_loss_{}.png".format(end_epoch)
 					plt.savefig(txt1)
 					plt.close()
 			
@@ -1368,7 +1368,7 @@ class Trainer:
 					plt.ylabel('Accuracy')
 					plt.legend(['Training accuracy'])
 					
-					txt2="../images/output_accu_{}.png".format(end_epoch)
+					txt2="../images/output_cbam_accu_{}.png".format(end_epoch)
 					plt.savefig(txt2)
 					plt.close()
 
@@ -1395,7 +1395,7 @@ class Trainer:
 			self.model_engine.model.save_weights(self.model_path)
 			print(f"[*] Model saved to {self.model_path}, end of training.")
 
-	def save_final_model(self, path: str = "arcface_final.h5", n: int = -4):
+	def save_final_model(self, path: str = "arcface_cbam_final.h5", n: int = -4):
 		m = tf.keras.models.Model(self.model_engine.model.layers[0].input, self.model_engine.model.layers[n].output)
 
 		m.save(path)
