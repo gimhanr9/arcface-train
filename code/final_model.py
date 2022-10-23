@@ -56,6 +56,68 @@ print(tf.__version__)
 # !cp -r /content/drive/MyDrive/tran.tfrecords /tmp/
 tf_record='../data/tran.tfrecords'
 
+
+class CustomDense(tf.keras.layers.Layer):
+	def __init__(self,num_units,activation="relu"):
+		super(CustomDense, self).__init__()
+		self.num_units=num_units
+		self.activation=tf.keras.layers.Activation(activation)
+
+	def build(self,input_shape):
+		self.weight=self.add_weight(shape=[input_shape[-1],self.num_units])
+		self.bias=self.add_weight(shape=[self.num_units])
+
+	def call(self,input):
+		y=tf.matmul(input,self.weight) + self.bias
+		y=self.activation(y)
+		return y
+
+def channel_attention_module(x, ratio=8):
+    batch, _, _, channel = x.shape
+
+    ## Shared layers
+    l1 = tf.keras.layers.Dense(channel//ratio, activation="relu", use_bias=False)
+    l2 = tf.keras.layers.Dense(channel, use_bias=False)
+
+    ## Global Average Pooling
+    x1 = tf.keras.layers.GlobalAveragePooling2D()(x)
+    x1 = l1(x1)
+    x1 = l2(x1)
+
+    ## Global Max Pooling
+    x2 = tf.keras.layers.GlobalMaxPooling2D()(x)
+    x2 = l1(x2)
+    x2 = l2(x2)
+
+    ## Add both the features and pass through sigmoid
+    feats = x1 + x2
+    feats = tf.keras.layers.Activation("sigmoid")(feats)
+    feats = tf.keras.layers.Multiply()([x, feats])
+
+    return feats
+
+def spatial_attention_module(x):
+    ## Average Pooling
+    x1 = tf.reduce_mean(x, axis=-1)
+    x1 = tf.expand_dims(x1, axis=-1)
+
+    ## Max Pooling
+    x2 = tf.reduce_max(x, axis=-1)
+    x2 = tf.expand_dims(x2, axis=-1)
+
+    ## Concatenat both the features
+    feats = tf.keras.layers.Concatenate()([x1, x2])
+    ## Conv layer
+    feats = tf.keras.layers.Conv2D(1, kernel_size=7, padding="same", activation="sigmoid")(feats)
+    feats = tf.keras.layers.Multiply()([x, feats])
+
+    return feats
+
+def cbam(x):
+    x = channel_attention_module(x)
+    x = spatial_attention_module(x)
+    return x
+
 class ArcFaceLayer(tf.keras.layers.Layer):
 	def __init__(self, num_classes, arc_m=0.5, arc_s=64., regularizer_l: float = 5e-4, **kwargs):  # has been set to it's defaults according to arcface paper
 		super(ArcFaceLayer, self).__init__(**kwargs)
@@ -451,6 +513,7 @@ def residual_unit_v3(data, num_filter, stride, dim_match, name, bottle_neck, **k
 			body = tf.keras.layers.Activation('sigmoid', name=name + "_se_sigmoid")(body)
 			bn3 = tf.keras.layers.Multiply()([bn3, body])
 		# se end
+		bn3 = cbam(bn3)
 
 		if dim_match:
 			shortcut = data
@@ -1301,9 +1364,7 @@ class Trainer:
 					plt.savefig(txt2)
 					plt.close()
 		 
-				if i % 570000 == 0 and self.use_arcface and i > 10:
-					self.save_final_model("../models/saveddrive/arcface_100final.h5")
-					print("[*] Final 100TH model saved")
+			
 
 				if max_iteration is not None and i >= max_iteration:
 					print(f"[{i}] Reached to given maximum iteration({max_iteration})")
