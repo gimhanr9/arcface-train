@@ -1214,6 +1214,8 @@ class Trainer:
 
 		return acc_mean, loss_mean, wrong_images
 
+	
+
 	def __init__(self, model_engine, dataset_engine, tensorboard_engine, use_arcface: bool,
 	             learning_rate: float = 0.01,
 	             model_path: str = "classifier_model.tf",
@@ -1253,7 +1255,7 @@ class Trainer:
 			weight_path=self.model_path,  # paths of weights file(h5 or tf), it is okay if doesn't exists
 			optimizer=optimizer  # Recommended: SGD
 		)
-
+	
 	def test_on_val_data(self, is_ccrop: bool = False, step_i: int = 1, alfa_multiplied_ten: int = 1):
 		step = int(step_i / 5700)
 
@@ -1261,7 +1263,9 @@ class Trainer:
 		acc_lfw, best_th = perform_val_arcface(512, 64, self.model_engine.model, self.lfw, self.lfw_issame, is_ccrop=is_ccrop)
 		print(f"[*] Results on LFW, Accuracy --> {acc_lfw} || Best Threshold --> {best_th}")
 		print("-----------------------------------")
+		
 		self.tensorboard_engine.add_with_step({"LFW": acc_lfw}, step=step)
+		return acc_lfw
 
 	def __call__(self, max_iteration: int = None, alfa_step=1000, qin: int = 10):
 		if max_iteration is not None and max_iteration <= 0:
@@ -1282,12 +1286,15 @@ class Trainer:
 	
 		train_accu=[]
 		train_loss=[]
+		accuracy_lfw=[]
 
 		for i, (x, y) in enumerate(self.dataset_engine.dataset):
 			logits, features, loss, reg_loss = self.model_engine.train_step_reg(x, y)
 			accuracy = self.calculate_accuracy(y, logits)
 			acc_mean(accuracy)
 			loss_mean(loss)
+			
+		
 
 			self.tensorboard_engine({"loss": loss, "reg_loss": reg_loss, "accuracy": accuracy})
 	 
@@ -1338,7 +1345,8 @@ class Trainer:
 					loss_mean.reset_states()
 
 				if i % 5700 == 0 and self.use_arcface and i > 10:
-					self.test_on_val_data(False, i, alfa_multiplied_qin)
+					accuracy1=self.test_on_val_data(False, i, alfa_multiplied_qin)
+					accuracy_lfw.append(accuracy1)
 					end_epoch=i//5700
 					path_to_save="../models/arcface_{}_final.h5".format(end_epoch)
 					self.save_final_model(path_to_save)
@@ -1362,6 +1370,16 @@ class Trainer:
 					
 					txt2="../images/output_accu_{}.png".format(end_epoch)
 					plt.savefig(txt2)
+					plt.close()
+
+					plt.plot(plotting_epochs, accuracy_lfw, 'b')
+					plt.title('Validation accuracy')
+					plt.xlabel('Epochs')
+					plt.ylabel('Accuracy')
+					plt.legend(['Validation accuracy'])
+					
+					txt3="../images/output_accu_lfw_{}.png".format(end_epoch)
+					plt.savefig(txt3)
 					plt.close()
 		 
 			
